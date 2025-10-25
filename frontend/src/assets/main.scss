@@ -1,0 +1,63 @@
+.body--dark {
+  --q-primary: #0794B9;
+  --q-secondary: #aaa8a8;
+  --q-accent: #9C27B0;
+  --q-positive: #21BA45;
+  --q-negative: #C10015;
+  --q-info: #31CCEC;
+  --q-warning: #F2C037;
+  --q-dark-page: #545454;
+}
+
+.body--light {
+  --q-primary: #0794B9;
+  --q-secondary: #545454;
+  --q-accent: #9C27B0;
+  --q-positive: #21BA45;
+  --q-negative: #C10015;
+  --q-info: #31CCEC;
+  --q-warning: #F2C037;
+}
+
+.text-team-yellow {
+  color: #000000 !important;
+}
+
+.bg-team-yellow {
+  background: #ced509 !important;
+}
+
+.text-team-blue {
+  color: #ffffff !important;
+}
+
+.bg-team-blue {
+  background: #134cc4 !important;
+}
+
+.max-content-width {
+  max-width: 900px;
+}
+
+/* Global reset and full-bleed background to remove white page edges */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* ensure theme variable is applied to the page background */
+  background: var(--q-dark-page, #545454);
+  color: #fff;
+}
+
+/* ensure the app root stretches full width and content doesn't create white gutters */
+#app > div {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: transparent; /* App.vue will set colored header/footer; keep page bg global */
+}
+
+/* sensible defaults */
+*, *::before, *::after { box-sizing: inherit }
+

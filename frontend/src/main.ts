@@ -1,6 +1,7 @@
 import {createApp} from 'vue'
 import App from './App.vue'
 import router from './router';
+import {createPinia} from "pinia";
 import {ApiController} from './services/ApiController';
 import {
     RemoteControlRequestType,
@@ -53,7 +54,16 @@ if (import.meta.env.PROD) {
 
 const apiController = new ApiController(latestState)
 
+// import global theme variables (main.scss)
+import './assets/main.scss'
+
+// default to dark body class so CSS variables are present
+if (typeof document !== 'undefined' && !document.body.classList.contains('body--dark') && !document.body.classList.contains('body--light')) {
+    document.body.classList.add('body--dark')
+}
+
 createApp(App)
     .use(router)
+    .use(createPinia())
     .provide('api', apiController)
     .mount('#app')

@@ -1,186 +1,225 @@
 <script setup lang="ts">
+import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
+import { useQuasar } from 'quasar';
 import ErrorMessageBar from './components/ErrorMessageBar.vue';
 import StatusBar from './components/StatusBar.vue';
-import {ApiController} from './services/ApiController';
-import {computed, inject, ref} from 'vue';
+import MatchStateToolbar from './components/MatchStateToolbar.vue';
+import MatchInfo from './views/MatchInfo.vue';
+import { ApiController } from './services/ApiController';
+import { useUiStateStore } from "@/store/uiState/index";
 
-const canSubstituteRobot = ref(false)
-const api = inject<ApiController>('api')
+const $q = useQuasar();
+const uiStore = useUiStateStore();
+const canSubstituteRobot = ref(false);
+const api = inject<ApiController>('api');
 const backgroundColor = computed(() => {
-  if (canSubstituteRobot.value) {
-    return 'rgb(249,159,50)'
-  }
-  return 'rgba(56, 58, 58, 0.68)'
-})
+  if (canSubstituteRobot.value) return 'rgb(249,159,50)';
+  return $q.dark.isActive ? 'var(--q-dark-page)' : 'rgba(56,58,58,0.86)';
+});
 
 api?.RegisterStateConsumer((s) => {
-  canSubstituteRobot.value = s.canSubstituteRobot || false
-})
+  canSubstituteRobot.value = s.canSubstituteRobot || false;
+});
+
+const rightDrawerOpen = ref(false);
+const rightDrawerWidth = ref(360);
+
+let resizing = false;
+let lastX = 0;
+const onGripMouseDown = (ev: MouseEvent) => {
+  ev.preventDefault();
+  resizing = true;
+  lastX = ev.clientX;
+};
+const onDocumentMouseMove = (ev: MouseEvent) => {
+  if (!resizing) return;
+  const dx = ev.clientX - lastX;
+  const newW = Math.max(160, Math.min(1000, rightDrawerWidth.value - dx));
+  rightDrawerWidth.value = newW;
+  lastX = ev.clientX;
+};
+const onDocumentMouseUp = () => {
+  resizing = false;
+};
+
+onMounted(() => {
+  document.addEventListener('mousemove', onDocumentMouseMove);
+  document.addEventListener('mouseup', onDocumentMouseUp);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onDocumentMouseMove);
+  document.removeEventListener('mouseup', onDocumentMouseUp);
+});
+
+const darkMode = computed(() => $q.dark.isActive);
+const toggleDarkMode = () => {
+  $q.dark.toggle();
+  uiStore.darkMode = $q.dark.isActive;
+};
+
+if (uiStore.darkMode !== undefined) {
+  $q.dark.set(uiStore.darkMode);
+}
+
+const showShortcuts = computed(() => uiStore.showShortcuts);
+const toggleShortcuts = () => {
+  uiStore.showShortcuts = !uiStore.showShortcuts;
+};
+
+let initialDrawerWidth = 0;
+const resizeRightDrawer = (ev: any) => {
+  if (ev.isFirst === true) {
+    initialDrawerWidth = uiStore.rightDrawerWidth;
+  }
+  uiStore.rightDrawerWidth = initialDrawerWidth - ev.offset.x;
+};
+const resizeLeftDrawer = (ev: any) => {
+  if (ev.isFirst === true) {
+    initialDrawerWidth = uiStore.leftDrawerWidth;
+  }
+  uiStore.leftDrawerWidth = initialDrawerWidth + ev.offset.x;
+};
+
+const dev = computed(() => {
+  return import.meta.env.DEV;
+});
 </script>
 
 <template>
-  <div id="main" :style="{'background-color': backgroundColor}">
-    <StatusBar/>
-    <div class="router-view">
-      <router-view/>
-    </div>
-    <ErrorMessageBar/>
+  <div id="app">
+    <header class="app-header">
+      <div class="left-controls">
+        <div class="title">SSL Remote Control</div>
+      </div>
+      <div class="header-center"></div>
+      <div class="right-controls">
+        <StatusBar />
+        <button class="icon-btn" @click="rightDrawerOpen = !rightDrawerOpen">☰</button>
+      </div>
+    </header>
+
+    <q-drawer
+      v-model="rightDrawerOpen"
+      side="right"
+      bordered
+      :width="rightDrawerWidth"
+      class="bg-dark"
+    >
+      <div class="grip" @mousedown.prevent="onGripMouseDown"></div>
+      <div class="drawer-content">
+      </div>
+    </q-drawer>
+
+    <main class="page-area" :style="{ marginRight: rightDrawerOpen ? rightDrawerWidth + 'px' : '0' }">
+      <div class="content-wrap">
+        <MatchInfo />
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="match-toolbar-wrap">
+        <MatchStateToolbar />
+      </div>
+      <div class="right-footer-items">
+        <StatusBar />
+        <ErrorMessageBar />
+      </div>
+    </footer>
   </div>
 </template>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: ghostwhite;
-  font-size: 4vmin;
-  height: 100%;
-  width: 100%;
+<style scoped>
+:root {
+  --header-h: 64px;
 }
 
-html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-}
-
-#main {
-  height: 100%;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 1vh 1vw;
+.app-header {
+  height: var(--header-h);
   display: flex;
-  flex-direction: column;
-  flex-wrap: nowrap;
+  align-items: center;
   justify-content: space-between;
-  align-items: stretch;
-  align-content: stretch;
-}
-
-.router-view {
-  flex-grow: 1;
-}
-
-.button {
-  display: inline-block;
-  margin: 0;
-  cursor: pointer;
-  border: 1px solid #bbb;
-  overflow: hidden;
-  font-size: 4vmin;
-  text-decoration: none;
-  white-space: nowrap;
-  color: #555;
-
-  background-color: #ddd;
-  background-image: linear-gradient(top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
-
-  transition: background-color .2s ease-out;
-  background-clip: padding-box; /* Fix bleeding */
-  border-radius: 1em;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 2px 2px -1px rgba(0, 0, 0, .5), 0 1px 0 rgba(255, 255, 255, .3) inset;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
-
-  user-select: none;
-}
-
-.button:hover {
-  background-color: #eee;
-  color: #555;
-}
-
-.button:active {
-  background: #e9e9e9;
-  position: relative;
-  top: 1px;
-  text-shadow: none;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .3) inset;
-}
-
-.button[disabled], .button[disabled]:hover, .button[disabled]:active {
-  border-color: #eaeaea;
-  background: #fafafa;
-  cursor: default;
-  position: static;
-  color: #999;
-}
-
-/* Colored buttons styles */
-
-.button.green, .button.red, .button.blue {
+  padding: 0 12px;
+  background: var(--q-primary);
   color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, .2);
-
-  background-image: linear-gradient(top, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+  box-sizing: border-box;
+}
+.left-controls,
+.right-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.title {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.icon-btn {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 1.2rem;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-
-.button.green {
-  background-color: #57a957;
-  border-color: #57a957;
+.q-drawer {
+  z-index: 40;
+}
+.drawer .grip {
+  position: absolute;
+  left: -8px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+.drawer-content {
+  padding: 12px;
+}
+.drawer-placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.button.green:hover {
-  background-color: #62c462;
+.page-area {
+  flex: 1 1 auto;
+  padding: 0;
+  box-sizing: border-box;
+  transition: margin 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.content-wrap {
+  width: 100%;
+  height: 100%;
+  margin: 0;
 }
 
-.button.green:active {
-  background: #57a957;
+.app-footer {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  box-sizing: border-box;
+  background: var(--q-primary);
+  color: #fff;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+.match-toolbar-wrap {
+  flex: 1;
+}
+.right-footer-items {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
-
-.button.red {
-  background-color: #ca3535;
-  border-color: #c43c35;
-}
-
-.button.red:hover {
-  background-color: #ee5f5b;
-}
-
-.button.red:active {
-  background: #c43c35;
-}
-
-
-.button.blue {
-  background-color: #269CE9;
-  border-color: #269CE9;
-}
-
-.button.blue:hover {
-  background-color: #70B9E8;
-}
-
-.button.blue:active {
-  background: #269CE9;
-}
-
-.green[disabled], .green[disabled]:hover, .green[disabled]:active {
-  border-color: #57A957;
-  background: #57A957;
-  color: #D2FFD2;
-}
-
-.red[disabled], .red[disabled]:hover, .red[disabled]:active {
-  border-color: #C43C35;
-  background: #C43C35;
-  color: #FFD3D3;
-}
-
-.blue[disabled], .blue[disabled]:hover, .blue[disabled]:active {
-  border-color: #269CE9;
-  background: #269CE9;
-  color: #93D5FF;
+@media (max-width: 700px) {
+  .content-wrap {
+    padding: 8px;
+  }
 }
 </style>
+
