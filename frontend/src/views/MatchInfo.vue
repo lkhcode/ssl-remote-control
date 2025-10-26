@@ -11,6 +11,10 @@
 
       <div class="match-status">
         <div class="status-item">
+          <span class="label">{{ i18n.matchType }}:</span>
+          <span class="value">{{ matchType }}</span>
+        </div>
+        <div class="status-item">
           <span class="label">{{ i18n.matchPhase }}:</span>
           <span class="value">{{ matchPhase }}</span>
         </div>
@@ -194,6 +198,7 @@ const i18n = computed(() => {
   if (lang.value === 'zh') {
     return {
       matchPhase: '比赛阶段',
+      matchType: '比赛类型',
       currentCommand: '当前指令',
       remainingTime: '剩余时间',
       raiseChallengeFlag: '提出异议',
@@ -219,6 +224,7 @@ const i18n = computed(() => {
   }
   return {
     matchPhase: 'Match Phase',
+    matchType: 'Match Type',
     currentCommand: 'Current Command',
     remainingTime: 'Remaining Time',
     raiseChallengeFlag: 'Raise Challenge Flag',
@@ -243,9 +249,58 @@ const i18n = computed(() => {
   };
 });
 
+// Referee 阶段名称映射
+const stageNames: Record<number, string> = {
+  0: '上半场准备 NORMAL_FIRST_HALF_PRE',
+  1: '上半场 NORMAL_FIRST_HALF',
+  2: '中场休息 NORMAL_HALF_TIME',
+  3: '下半场准备 NORMAL_SECOND_HALF_PRE',
+  4: '下半场 NORMAL_SECOND_HALF',
+  5: '加时赛休息 EXTRA_TIME_BREAK',
+  6: '加时赛上半场准备 EXTRA_FIRST_HALF_PRE',
+  7: '加时赛上半场 EXTRA_FIRST_HALF',
+  8: '加时赛中场休息 EXTRA_HALF_TIME',
+  9: '加时赛下半场准备 EXTRA_SECOND_HALF_PRE',
+  10: '加时赛下半场 EXTRA_SECOND_HALF',
+  11: '点球大战休息 PENALTY_SHOOTOUT_BREAK',
+  12: '点球大战 PENALTY_SHOOTOUT',
+  13: '比赛结束 POST_GAME',
+};
+
+// Referee 命令名称映射
+const commandNames: Record<number, string> = {
+  0: 'HALT',
+  1: 'STOP',
+  2: '标准开始 Normal Start',
+  3: '强制开始 Force Start',
+  4: '黄方开球 Kickoff Yellow',
+  5: '蓝方开球 Kickoff Blue',
+  6: '黄方点球 Pentalty Yellow',
+  7: '蓝方点球 Penalty Blue',
+  8: '黄方直接任意球 Direct Free Yellow',
+  9: '蓝方直接任意球 Direct Free Blue',
+  10: '黄方间接任意球 Indirect Free Yellow',
+  11: '蓝方间接任意球 Indirect Free Blue',
+  12: 'Timeout Yellow',
+  13: 'Timeout Blue',
+  14: '黄方进球 Goal Yellow',
+  15: '蓝方进球 Goal Blue',
+  16: '黄方放球 Ball Placement Yellow',
+  17: '蓝方放球 Ball Placement Blue',
+};
+
+// Referee 比赛类型名称映射 (MatchType)
+const matchTypeNames: Record<number, string> = {
+  0: '比赛类型未设置',
+  1: '小组赛 Group Phase',
+  2: '淘汰赛 Elimination Phase',
+  3: '友谊赛 Friendly',
+};
+
 // 比赛信息
 const teamName = ref('请等待比赛开始');
 const teamColor = ref('blue');
+const matchType = ref('比赛类型未设置');
 const matchPhase = ref('未开始');
 const currentCommand = ref('无');
 const remainingTime = ref('00:00');
@@ -259,12 +314,7 @@ const displayTeamColor = computed(() => {
 });
 
 const displayTeamName = computed(() => {
-  const colorMap: Record<number, string> = {
-    [Team.YELLOW]: 'Yellow Team',
-    [Team.BLUE]: 'Blue Team',
-    [Team.UNKNOWN]: '请等待比赛开始',
-  };
-  return colorMap[state.value.team] || '请等待比赛开始';
+  return teamName.value || '请等待比赛开始';
 });
 
 // 按钮可用状态
@@ -416,13 +466,20 @@ api?.RegisterRefereeConsumer((referee) => {
     ? `${Math.floor(Number(referee.stageTimeLeft / 60000000n))}:${Math.floor(Number((referee.stageTimeLeft % 60000000n) / 1000000n)).toString().padStart(2, '0')}`
     : '00:00';
 
-  currentCommand.value = referee.command.toString();
+  currentCommand.value = commandNames[Number(referee.command)] || `UNKNOWN(${referee.command})`;
 
-  matchPhase.value = referee.stage.toString();
+  matchPhase.value = stageNames[Number(referee.stage)] || `UNKNOWN(${referee.stage})`;
 
-  teamName.value = referee.blueTeamOnPositiveHalf && referee.blue
-    ? referee.blue.name
-    : referee.yellow?.name || 'Unknown';
+  matchType.value = matchTypeNames[Number(referee.matchType)] || `UNKNOWN(${referee.matchType})`;
+
+  // 根据当前队伍获取对应的队伍名称
+  if (state.value.team === Team.YELLOW) {
+    teamName.value = referee.yellow?.name || '黄队';
+  } else if (state.value.team === Team.BLUE) {
+    teamName.value = referee.blue?.name || '蓝队';
+  } else {
+    teamName.value = '请等待比赛开始';
+  }
 });
 
 onMounted(() => {

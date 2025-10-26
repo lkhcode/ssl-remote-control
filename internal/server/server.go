@@ -86,6 +86,12 @@ func (s *ServerConnection) publishState(state *rcon.ControllerToRemoteControl) {
 }
 
 func (s *ServerConnection) publishRefereeData(data []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic in publishRefereeData:", r)
+		}
+	}()
+
 	// Unmarshal the binary protobuf data
 	referee := &rcon.Referee{}
 	err := proto.Unmarshal(data, referee)
