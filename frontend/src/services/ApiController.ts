@@ -24,12 +24,12 @@ export class ApiController {
     }
 
     public Send(request: RemoteControlToController) {
-        const ws = this.ws
-        if (ws) {
-            const json = JSON.stringify(toJson(RemoteControlToControllerSchema, request))
-            ws.send(json)
-        }
-    }
+		const ws = this.ws;
+		if (ws) {
+			const json = JSON.stringify(toJson(RemoteControlToControllerSchema, request));
+			ws.send(json);
+		}
+	}
 
     public RegisterStateConsumer(cb: ((state: RemoteControlTeamState) => any)) {
         this.stateConsumer.push(cb)
