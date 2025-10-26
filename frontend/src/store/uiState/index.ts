@@ -8,10 +8,6 @@ interface UiState {
   teamDetailsYellowCardsExpanded: boolean,
   teamDetailsRedCardsExpanded: boolean,
   darkMode?: boolean,
-  rightDrawerWidth: number,
-  leftDrawerWidth: number,
-  leftDrawerOpen: boolean,
-  rightDrawerOpen: boolean,
   showShortcuts: boolean,
 }
 
@@ -23,10 +19,6 @@ export const useUiStateStore = defineStore('uiState', {
       teamDetailsYellowCardsExpanded: true,
       teamDetailsRedCardsExpanded: true,
       darkMode: undefined,
-      rightDrawerWidth: 400,
-      leftDrawerWidth: 300,
-      leftDrawerOpen: false,
-      rightDrawerOpen: false,
       showShortcuts: false,
     }
     const storedData = localStorage.getItem('ui-state')

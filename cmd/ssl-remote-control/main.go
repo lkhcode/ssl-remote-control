@@ -2,12 +2,14 @@ package main
 
 import (
 	"flag"
+	"log"
+	"net"
+	"net/http"
+
 	"github.com/RoboCup-SSL/ssl-remote-control/frontend"
 	"github.com/RoboCup-SSL/ssl-remote-control/internal/rcon"
 	"github.com/RoboCup-SSL/ssl-remote-control/internal/server"
 	"github.com/RoboCup-SSL/ssl-remote-control/internal/sslnet"
-	"log"
-	"net/http"
 )
 
 var address = flag.String("address", ":8084", "The address on which the UI and API is served, default: :8084")
@@ -32,6 +34,8 @@ func main() {
 		c.Start(*remoteControlAddress)
 	}
 
+	go listenToRefereeData(*refereeAddress, s)
+
 	frontend.HandleUi()
 
 	// serve the bidirectional web socket
@@ -50,5 +54,31 @@ func detectHostAndRun(c *rcon.Client) {
 		log.Print("Detected game-controller host: ", host)
 		detectedAddress := sslnet.GetConnectionString(*remoteControlAddress, host)
 		c.Start(detectedAddress)
+	}
+}
+
+func listenToRefereeData(address string, s *server.Server) {
+	log.Printf("Listening to referee data on %s", address)
+	udpAddr, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		log.Fatalf("Failed to resolve UDP address: %v", err)
+	}
+
+	conn, err := net.ListenMulticastUDP("udp", nil, udpAddr)
+	if err != nil {
+		log.Fatalf("Failed to listen to multicast UDP: %v", err)
+	}
+	defer conn.Close()
+
+	buffer := make([]byte, 2048)
+	for {
+		n, _, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			log.Printf("Error reading from UDP: %v", err)
+			continue
+		}
+		// Send the binary protobuf data directly to the server
+		// The server will handle the deserialization
+		s.PublishRefereeData(buffer[:n])
 	}
 }

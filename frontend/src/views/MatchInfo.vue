@@ -411,6 +411,20 @@ api?.RegisterStateConsumer((s) => {
   state.value = s;
 });
 
+api?.RegisterRefereeConsumer((referee) => {
+  remainingTime.value = referee.stageTimeLeft > 0n
+    ? `${Math.floor(Number(referee.stageTimeLeft / 60000000n))}:${Math.floor(Number((referee.stageTimeLeft % 60000000n) / 1000000n)).toString().padStart(2, '0')}`
+    : '00:00';
+
+  currentCommand.value = referee.command.toString();
+
+  matchPhase.value = referee.stage.toString();
+
+  teamName.value = referee.blueTeamOnPositiveHalf && referee.blue
+    ? referee.blue.name
+    : referee.yellow?.name || 'Unknown';
+});
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeyDown);
 });

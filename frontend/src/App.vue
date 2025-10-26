@@ -21,36 +21,6 @@ api?.RegisterStateConsumer((s) => {
   canSubstituteRobot.value = s.canSubstituteRobot || false;
 });
 
-const rightDrawerOpen = ref(false);
-const rightDrawerWidth = ref(360);
-
-let resizing = false;
-let lastX = 0;
-const onGripMouseDown = (ev: MouseEvent) => {
-  ev.preventDefault();
-  resizing = true;
-  lastX = ev.clientX;
-};
-const onDocumentMouseMove = (ev: MouseEvent) => {
-  if (!resizing) return;
-  const dx = ev.clientX - lastX;
-  const newW = Math.max(160, Math.min(1000, rightDrawerWidth.value - dx));
-  rightDrawerWidth.value = newW;
-  lastX = ev.clientX;
-};
-const onDocumentMouseUp = () => {
-  resizing = false;
-};
-
-onMounted(() => {
-  document.addEventListener('mousemove', onDocumentMouseMove);
-  document.addEventListener('mouseup', onDocumentMouseUp);
-});
-onBeforeUnmount(() => {
-  document.removeEventListener('mousemove', onDocumentMouseMove);
-  document.removeEventListener('mouseup', onDocumentMouseUp);
-});
-
 const darkMode = computed(() => $q.dark.isActive);
 const toggleDarkMode = () => {
   $q.dark.toggle();
@@ -64,20 +34,6 @@ if (uiStore.darkMode !== undefined) {
 const showShortcuts = computed(() => uiStore.showShortcuts);
 const toggleShortcuts = () => {
   uiStore.showShortcuts = !uiStore.showShortcuts;
-};
-
-let initialDrawerWidth = 0;
-const resizeRightDrawer = (ev: any) => {
-  if (ev.isFirst === true) {
-    initialDrawerWidth = uiStore.rightDrawerWidth;
-  }
-  uiStore.rightDrawerWidth = initialDrawerWidth - ev.offset.x;
-};
-const resizeLeftDrawer = (ev: any) => {
-  if (ev.isFirst === true) {
-    initialDrawerWidth = uiStore.leftDrawerWidth;
-  }
-  uiStore.leftDrawerWidth = initialDrawerWidth + ev.offset.x;
 };
 
 const dev = computed(() => {
@@ -94,23 +50,10 @@ const dev = computed(() => {
       <div class="header-center"></div>
       <div class="right-controls">
         <StatusBar />
-        <button class="icon-btn" @click="rightDrawerOpen = !rightDrawerOpen">☰</button>
       </div>
     </header>
 
-    <q-drawer
-      v-model="rightDrawerOpen"
-      side="right"
-      bordered
-      :width="rightDrawerWidth"
-      class="bg-dark"
-    >
-      <div class="grip" @mousedown.prevent="onGripMouseDown"></div>
-      <div class="drawer-content">
-      </div>
-    </q-drawer>
-
-    <main class="page-area" :style="{ marginRight: rightDrawerOpen ? rightDrawerWidth + 'px' : '0' }">
+    <main class="page-area">
       <div class="content-wrap">
         <MatchInfo />
       </div>
@@ -164,24 +107,6 @@ const dev = computed(() => {
 }
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.06);
-}
-
-.q-drawer {
-  z-index: 40;
-}
-.drawer .grip {
-  position: absolute;
-  left: -8px;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  cursor: ew-resize;
-}
-.drawer-content {
-  padding: 12px;
-}
-.drawer-placeholder {
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .page-area {

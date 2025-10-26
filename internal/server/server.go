@@ -1,11 +1,14 @@
 package server
 
 import (
+	"encoding/json"
+	"log"
+	"net/http"
+
 	"github.com/RoboCup-SSL/ssl-remote-control/internal/rcon"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
-	"log"
-	"net/http"
+	"google.golang.org/protobuf/proto"
 )
 
 type Server struct {
@@ -42,6 +45,13 @@ func (a *Server) Publish(state *rcon.ControllerToRemoteControl) {
 	}
 }
 
+// PublishRefereeData publishes referee data to all connected clients
+func (a *Server) PublishRefereeData(data []byte) {
+	for _, serverConn := range a.connections {
+		serverConn.publishRefereeData(data)
+	}
+}
+
 // WsHandler handles incoming web socket connections
 func (a *Server) WsHandler(w http.ResponseWriter, r *http.Request) {
 	u := websocket.Upgrader{
@@ -72,6 +82,41 @@ func (s *ServerConnection) publishState(state *rcon.ControllerToRemoteControl) {
 	err = s.conn.WriteMessage(websocket.TextMessage, b)
 	if err != nil {
 		log.Println("Could not write message to api client:", err)
+	}
+}
+
+func (s *ServerConnection) publishRefereeData(data []byte) {
+	// Unmarshal the binary protobuf data
+	referee := &rcon.Referee{}
+	err := proto.Unmarshal(data, referee)
+	if err != nil {
+		log.Println("Could not unmarshal referee data:", err)
+		return
+	}
+
+	// Marshal the referee data to JSON
+	refereeJSON, err := protojson.Marshal(referee)
+	if err != nil {
+		log.Println("Could not marshal referee data to JSON:", err)
+		return
+	}
+
+	// Create a wrapper object with type and payload
+	wrapper := map[string]interface{}{
+		"type":    "referee",
+		"payload": json.RawMessage(refereeJSON),
+	}
+
+	// Marshal the wrapper to JSON
+	messageJSON, err := json.Marshal(wrapper)
+	if err != nil {
+		log.Println("Could not marshal wrapper to JSON:", err)
+		return
+	}
+
+	err = s.conn.WriteMessage(websocket.TextMessage, messageJSON)
+	if err != nil {
+		log.Println("Could not write referee data to api client:", err)
 	}
 }
 

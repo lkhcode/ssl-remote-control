@@ -6,12 +6,15 @@ import {
 } from '../proto/ssl_gc_rcon_remotecontrol_pb';
 import {ControllerReply_StatusCode} from '../proto/ssl_gc_rcon_pb';
 import {toJson, fromJson} from "@bufbuild/protobuf";
+import type {Referee} from '../proto/ssl_gc_referee_message_pb';
+import {RefereeSchema} from '../proto/ssl_gc_referee_message_pb';
 
 export class ApiController {
     private readonly apiPath = '/api/control'
     private ws ?: WebSocket
     private readonly stateConsumer: ((state: RemoteControlTeamState) => any)[] = []
     private readonly errorConsumer: ((message: string) => any)[] = []
+    private readonly refereeConsumer: ((referee: Referee) => any)[] = []
 
     private latestState: RemoteControlTeamState
 
@@ -33,6 +36,10 @@ export class ApiController {
         cb(this.latestState)
     }
 
+    public RegisterRefereeConsumer(cb: ((referee: Referee) => any)) {
+        this.refereeConsumer.push(cb)
+    }
+
     public RegisterErrorConsumer(cb: ((message: string) => any)) {
         this.errorConsumer.push(cb)
     }
@@ -46,16 +53,28 @@ export class ApiController {
         const ws = new WebSocket(address);
 
         ws.onmessage = (e) => {
-            const reply = fromJson(ControllerToRemoteControlSchema, JSON.parse(e.data))
-            if (reply.controllerReply?.statusCode === ControllerReply_StatusCode.OK && reply.state) {
-                this.latestState = reply.state
-                for (const callback of this.stateConsumer) {
-                    callback(reply.state)
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'referee') {
+                    const referee = fromJson(RefereeSchema, data.payload, {ignoreUnknownFields: true});
+                    for (const callback of this.refereeConsumer) {
+                        callback(referee);
+                    }
+                } else {
+                    const reply = fromJson(ControllerToRemoteControlSchema, data, {ignoreUnknownFields: true});
+                    if (reply.controllerReply?.statusCode === ControllerReply_StatusCode.OK && reply.state) {
+                        this.latestState = reply.state;
+                        for (const callback of this.stateConsumer) {
+                            callback(reply.state);
+                        }
+                    } else if (reply.controllerReply?.statusCode === ControllerReply_StatusCode.REJECTED) {
+                        for (const callback of this.errorConsumer) {
+                            callback(reply.controllerReply.reason);
+                        }
+                    }
                 }
-            } else if (reply.controllerReply?.statusCode === ControllerReply_StatusCode.REJECTED) {
-                for (const callback of this.errorConsumer) {
-                    callback(reply.controllerReply.reason)
-                }
+            } catch (error) {
+                console.error("Failed to process WebSocket message", error);
             }
         };
 
