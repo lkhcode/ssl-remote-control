@@ -33,7 +33,7 @@
     <div class="buttons-section">
       <!-- Raise Challenge Flag -->
       <button 
-        class="control-btn primary"
+        class="control-btn purple"
         :disabled="!canRequestChallengeFlag" 
         @click="requestChallengeFlag"
       >
@@ -43,7 +43,7 @@
 
       <!-- Fail Ballplacement -->
       <button 
-        class="control-btn primary"
+        class="control-btn danger"
         :disabled="!canFailBallplacement" 
         @click="failBallplacement"
       >
@@ -122,7 +122,7 @@
       </button>
       <button 
         v-else
-        class="control-btn primary"
+        class="control-btn success"
         :disabled="!canRequestRobotSubstitution" 
         @click="toggleRobotSubstitution"
       >
@@ -611,6 +611,14 @@ onUnmounted(() => {
 
 .control-btn.primary:hover:not(:disabled) {
   background-color: #0056b3;
+}
+
+.control-btn.purple {
+  background-color: #7c3aed;
+}
+
+.control-btn.purple:hover:not(:disabled) {
+  background-color: #6d28d9;
 }
 
 .control-btn.orange {
